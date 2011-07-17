@@ -9,45 +9,31 @@ import urllib, random
 
 from datetime import datetime, timedelta
 
-ALLOWED_DIMENSIONS = (
-    # (width, height, quality)
-    # User Profile Images
-    (50, 50, 85),
-    (28, 28, 85),
-    (150, 150, 85),
-    (300, 100, 85),
-    (300, 150, 85),
-    (300, 300, 85),
-    (80, 80, 75),
-    # Cloudcast Images
-    (50, 50, 85),
-    (25, 25, 85),
-    (100, 100, 85),
-    (300, 150, 85),
-    (300, 300, 85),
-    (80, 80, 75),
-    # Consumer Images
-    (60, 60, 85),
-    # Campaigns
-    (270, 200, 85),
-    # Fixed width ones
-    (300, None, 85),
-)
+BASE_URL = ''
 
-BASE_URL = 'http://www.mixcloud.com/media/'
+ALLOWED_DIMENSIONS = (
+    (300, 300, 85),
+)
 
 class OriginalImage(db.Model):
     image_data = db.BlobProperty()
 
 class BaseResizeHandler(webapp.RequestHandler):
     def get(self, width, height, quality, content_url):
+
         width, quality = int(width), int(quality)
         height = int(height) if height else None
 
-        if not content_url or not (width, height, quality) in ALLOWED_DIMENSIONS:
-            return self.error('Invalid arguments')
+        if ALLOWED_DIMENSIONS and not (width, height, quality) in ALLOWED_DIMENSIONS:
+            return self.error('Disallowed dimensions.')
 
-        url = BASE_URL + content_url
+        if not content_url:
+            return self.error('No content url given.')
+		
+        if BASE_URL:
+            url = BASE_URL + content_url
+        else:
+            url = 'http://' + content_url
 
         response_image_data = self.get_cached(url, width, height, quality)
         if response_image_data is not None:
@@ -151,6 +137,6 @@ def crop_ops(width, height, requested_width, requested_height):
 
 if __name__ == '__main__':
     run_wsgi_app(webapp.WSGIApplication([
-        (r'/w/(\d+)/h/(\d+)/q/(\d+)/([a-zA-Z0-9-_/.]+)', CropHandler),
-        (r'/w/(\d+)/q/(\d+)/([a-zA-Z0-9-_/.]+)', WidthHandler),
+        (r'/w/(\d+)/h/(\d+)/q/(\d+)/([a-zA-Z0-9-_/.:]+)', CropHandler),
+        (r'/w/(\d+)/q/(\d+)/([a-zA-Z0-9-_/.:]+)', WidthHandler),
     ], debug=False))
